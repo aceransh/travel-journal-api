@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from sqlalchemy import Column, Integer, String, Date
 from database import Base
@@ -19,6 +19,7 @@ class TripCreate(TripBase):
 
 class Trip(TripBase):
     id: int
+    model_config = ConfigDict(from_attributes=True)
 
 class TripDB(Base):
     __tablename__ = "trips"
