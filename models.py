@@ -2,6 +2,9 @@ from datetime import date
 from typing import Optional
 from pydantic import BaseModel
 
+from sqlalchemy import Column, Integer, String, Date
+from database import Base
+
 
 class TripBase(BaseModel):
     locationName: str
@@ -16,3 +19,14 @@ class TripCreate(TripBase):
 
 class Trip(TripBase):
     id: int
+
+class TripDB(Base):
+    __tablename__ = "trips"
+
+    id = Column(Integer, primary_key=True, index=True)
+    locationName = Column(String, index=True)
+    city = Column(String, index=True)
+    country = Column(String, index=True)
+    visitDate = Column(Date)
+    rating = Column(Integer)
+    notes = Column(String, nullable=True)    

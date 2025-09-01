@@ -2,7 +2,11 @@ from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Query, Response
 from datetime import date
 
-from models import Trip, TripCreate
+from models import Trip, TripCreate, TripDB
+
+from database import Base, engine
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
