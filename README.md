@@ -1,53 +1,76 @@
-# Travel Journal API (FastAPI + SQLite)
+# Travel Journal REST API
 
-A simple REST API for recording and querying travel records with filtering, pagination, and basic aggregation. Built with FastAPI, Pydantic, SQLAlchemy, and SQLite.
+A production-ready REST API for logging and querying travel experiences. It supports full CRUD for trips, robust filtering and pagination, and a bonus aggregation endpoint for insights. Built for the App Team Carolina take-home to showcase thoughtful API design, clean architecture, and developer ergonomics.
 
-Repo is ready to run locally and includes a seed script for demo data.
+## 🚀 Tech Stack
 
-## Quickstart
+| Component      | Technology | Rationale |
+| --- | --- | --- |
+| Language | Python | Versatile, readable, large ecosystem |
+| API Framework | FastAPI | High performance, automatic validation with Pydantic, interactive docs |
+| Database ORM | SQLAlchemy | Powerful query builder, safe by default (prevents SQL injection) |
+| Database | SQLite | Simple, file-based, zero setup required |
+| Web Server | Uvicorn | Lightning-fast ASGI server optimized for FastAPI |
 
-Prereqs: Python 3.11+ recommended
+## ✨ Core Features
 
-- Create and activate a virtual environment
-  - macOS/Linux:
-    - python -m venv .venv
-    - source .venv/bin/activate
-  - Windows (PowerShell):
-    - python -m venv .venv
-    - .\.venv\Scripts\Activate.ps1
+- Full CRUD functionality (Create, Read, Update, Delete) for travel records.
+- Persistent data storage using a SQLite database.
+- Advanced, database-level filtering on the GET /trips endpoint.
+- Efficient pagination using limit and offset.
+- Bonus aggregation endpoint to calculate average ratings by country.
+- Automatic, interactive API documentation via FastAPI.
 
-- Install dependencies
-  - pip install -r requirements.txt
+## 📚 API Endpoint Documentation
 
-- Run the API
-  - uvicorn main:app --reload
-  - API runs at http://127.0.0.1:8000
+Base URL: http://127.0.0.1:8000
 
-- Seed 20 example trips (optional; macOS/Linux)
-  - chmod +x ./seed.sh
-  - ./seed.sh
-
-- Interactive Docs
-  - Swagger UI: http://127.0.0.1:8000/docs
-  - ReDoc: http://127.0.0.1:8000/redoc
-
-## Health
-
-- GET /health → {"Status":"Ok"}
-
-## Data Model
-
-Trip
-- id: integer
-- locationName: string
-- city: string
-- country: string
-- visitDate: date (YYYY-MM-DD)
-- rating: integer (1–5 expected)
-- notes: string | null
-
-Example
+1) POST /trips — Create a new travel record
+- Request body:
+```json
+{
+  "locationName": "Louvre Museum",
+  "city": "Paris",
+  "country": "France",
+  "visitDate": "2024-06-02",
+  "rating": 4,
+  "notes": "Mona Lisa"
+}
 ```
+- Success response (201):
+```json
+{
+  "id": 1,
+  "locationName": "Louvre Museum",
+  "city": "Paris",
+  "country": "France",
+  "visitDate": "2024-06-02",
+  "rating": 4,
+  "notes": "Mona Lisa"
+}
+```
+
+2) GET /trips — List trips with filtering and pagination
+- Key query params: country, minRating, limit, offset
+  - Example: /trips?country=USA&minRating=4&limit=10&offset=0
+- Success response (200):
+```json
+[
+  {
+    "id": 10,
+    "locationName": "Statue of Liberty",
+    "city": "New York",
+    "country": "USA",
+    "visitDate": "2024-09-01",
+    "rating": 5,
+    "notes": "Gift from France"
+  }
+]
+```
+
+3) GET /trips/{trip_id} — Retrieve a single trip
+- Success response (200):
+```json
 {
   "id": 1,
   "locationName": "Eiffel Tower",
@@ -59,139 +82,111 @@ Example
 }
 ```
 
-## Endpoints
-
-Base: http://127.0.0.1:8000
-
-- GET / → "Hello World"
-- GET /health → health check
-- POST /trips → create
-- GET /trips → list with rich filtering + pagination
-- GET /trips/{trip_id} → read one
-- PUT /trips/{trip_id} → full update
-- DELETE /trips/{trip_id} → delete
-- GET /trips/stats/avg-rating-by-country → aggregation
-
-### Create a trip
-POST /trips
-- Body:
-```
+4) PUT /trips/{trip_id} — Update a trip (full replacement)
+- Request body:
+```json
 {
-  "locationName": "Louvre Museum",
+  "locationName": "Eiffel Tower",
   "city": "Paris",
   "country": "France",
-  "visitDate": "2024-06-02",
-  "rating": 4,
-  "notes": "Mona Lisa"
+  "visitDate": "2024-06-01",
+  "rating": 5,
+  "notes": "Sunset view"
 }
 ```
-- cURL:
-```
-curl -X POST http://127.0.0.1:8000/trips \
-  -H "Content-Type: application/json" \
-  -d '{"locationName":"Louvre Museum","city":"Paris","country":"France","visitDate":"2024-06-02","rating":4,"notes":"Mona Lisa"}'
-```
+- Success response (200): same shape as GET /trips/{trip_id} with updated fields.
 
-### List trips (filtering + pagination)
-GET /trips
-- Query params (all optional):
-  - locationName (substring, case-insensitive)
-  - city (substring, case-insensitive)
-  - country (substring, case-insensitive)
-  - visitDate (exact date)
-  - visitDateFrom (inclusive)
-  - visitDateTo (inclusive)
-  - rating (exact)
-  - minRating, maxRating
-  - limit (default 20, 1–100)
-  - offset (default 0)
-- Headers:
-  - X-Total-Count: total records matching filters
-- cURL examples:
-  - All trips (first page):
-    - curl "http://127.0.0.1:8000/trips"
-  - Paris trips rated >=4 in June 2024:
-    - curl "http://127.0.0.1:8000/trips?city=paris&minRating=4&visitDateFrom=2024-06-01&visitDateTo=2024-06-30"
-  - USA trips, paginated:
-    - curl -i "http://127.0.0.1:8000/trips?country=usa&limit=5&offset=0"
+5) DELETE /trips/{trip_id} — Delete a trip
+- Success response: 204 No Content (empty body)
 
-### Get a trip
-GET /trips/{trip_id}
-- cURL:
-  - curl "http://127.0.0.1:8000/trips/1"
-
-### Update a trip (full replace)
-PUT /trips/{trip_id}
-- Body: same shape as create
-- cURL:
-```
-curl -X PUT http://127.0.0.1:8000/trips/1 \
-  -H "Content-Type: application/json" \
-  -d '{"locationName":"Eiffel Tower","city":"Paris","country":"France","visitDate":"2024-06-01","rating":5,"notes":"Sunset view"}'
-```
-
-### Delete a trip
-DELETE /trips/{trip_id}
-- Returns 204 No Content on success
-- cURL:
-  - curl -X DELETE "http://127.0.0.1:8000/trips/1" -i
-
-### Aggregation: average rating by country
-GET /trips/stats/avg-rating-by-country
-- Response:
-```
+6) GET /trips/stats/avg-rating-by-country — Aggregated insights
+- Success response (200):
+```json
 [
   { "country": "Japan", "count": 4, "avgRating": 4.5 },
-  { "country": "USA", "count": 7, "avgRating": 4.29 },
-  ...
+  { "country": "USA", "count": 7, "avgRating": 4.29 }
 ]
 ```
-- cURL:
-  - curl "http://127.0.0.1:8000/trips/stats/avg-rating-by-country"
 
-## Error Handling
+Notes:
+- Validation errors return 422 with details.
+- Nonexistent resources return 404 with a clear message.
 
-- 404 Not Found when a trip ID does not exist
-  - { "detail": "Trip 999 not found" }
-- 422 Unprocessable Entity for invalid payloads (FastAPI/Pydantic validation)
+## 🧠 My Thought Process & Design Choices
 
-Notes
-- Rating is expected to be 1–5. Query validators enforce ranges for filters; request model currently relies on caller discipline.
+- FastAPI was chosen for speed of development, strong typing, performance, and built-in Swagger/ReDoc. Pydantic models ensure request/response consistency and validation with minimal boilerplate.
+- The API follows REST principles:
+  - Plural, resource-oriented paths (/trips).
+  - Standard HTTP methods (GET, POST, PUT, DELETE).
+  - Appropriate status codes (201 on create, 204 on delete, 404 on not found, 422 on validation errors).
+- Data is persisted via SQLAlchemy ORM into SQLite for a portable, zero-config setup suitable for interviews and demos.
 
-## Design Decisions
+Challenge: Efficient Filtering
+- Rather than filtering in Python post-fetch (which doesn’t scale), filtering is pushed down to the database via SQLAlchemy’s query builder (LOWER + LIKE for case-insensitive substring matches, range filters for dates/ratings). This keeps queries efficient and leverages DB indexing if migrated to a production database later.
 
-- Framework: FastAPI for speed, typing, auto-docs, and Pydantic validation.
-- Data: SQLite via SQLAlchemy ORM for local, file-backed persistence (app.db).
-- Models: Clear separation of Pydantic models (request/response) and SQLAlchemy models (DB).
-- Filtering: Case-insensitive substring search using SQL LOWER + LIKE; exact/ range filters for date and rating.
-- Pagination: limit/offset plus X-Total-Count header for client-side paging.
-- Consistency: Conventional RESTful routes and JSON payloads.
+## 📈 Future Improvements
 
-Project Structure
-- main.py: FastAPI app and routes
-- models.py: Pydantic schemas and SQLAlchemy Trip table
-- database.py: engine/session setup (SQLite)
-- requirements.txt: pinned deps
-- seed.sh: 20 sample trips via POST requests
+1. User Authentication (JWT) to secure endpoints and enable per-user journals.
+2. Image Uploads for attaching a photo per trip (local or S3, signed URLs).
+3. Automated Testing with pytest and testcontainers/SQLite-in-memory for reliability.
+4. Validation: enforce rating 1–5 at the model level; add stricter field constraints.
+5. Database Migrations with Alembic for schema evolution.
+6. More analytics: top destinations per month, streaks, most-visited cities.
+7. Performance: indexes on city/country/date; caching for aggregations.
+8. Configuration: environment variables for DB URL, ports, and CORS.
 
-## Demo Flow (15–20 min)
+## 🛠️ How to Set Up and Run This Project
 
-- Health check and docs (/docs)
+1) Clone the repository
+```
+git clone <YOUR_PUBLIC_REPO_URL> travel-journal-api
+cd travel-journal-api
+```
+
+2) Create and activate a virtual environment
+- macOS/Linux:
+```
+python -m venv .venv
+source .venv/bin/activate
+```
+- Windows (PowerShell):
+```
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+3) Install dependencies
+```
+pip install -r requirements.txt
+```
+
+4) Run the server
+```
+uvicorn main:app --reload
+```
+- App runs at: http://127.0.0.1:8000
+- Docs: http://127.0.0.1:8000/docs
+
+Optional: Seed demo data on macOS/Linux
+```
+chmod +x ./seed.sh
+./seed.sh
+```
+
+## 🧪 How to Demo & Test
+
+- Use the interactive Swagger UI at: http://127.0.0.1:8000/docs
+- Steps:
+  - Expand POST /trips, click Try it out, and create a record.
+  - Open GET /trips to list and filter using country, minRating, limit, offset.
+  - Retrieve a single record via GET /trips/{trip_id}.
+  - Update with PUT /trips/{trip_id} and delete with DELETE /trips/{trip_id}.
+  - Show insights via GET /trips/stats/avg-rating-by-country.
 - Create a trip (POST /trips)
 - List with filters + pagination (GET /trips?city=...&minRating=...&visitDateFrom=...&limit=...&offset=...)
 - Get one, update, delete (GET/PUT/DELETE /trips/{id})
 - Aggregation (GET /trips/stats/avg-rating-by-country)
 - Brief code walk-through: models.py → database.py → main.py query building
-
-## Future Improvements
-
-- Validation: enforce rating 1–5 at model level; stricter field constraints.
-- Migrations: Alembic for schema evolution.
-- Images: UploadFile support; store in S3/local with signed URLs.
-- Auth: user accounts, per-user journals, rate limiting.
-- More analytics: top destinations per month, streaks, most-visited cities.
-- Performance: indexes on city/country/date; caching for aggregations.
-- Config: environment variables for DB URL, ports, CORS.
 
 ## Notes
 
